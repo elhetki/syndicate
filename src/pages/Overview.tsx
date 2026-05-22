@@ -115,8 +115,7 @@ export function Overview() {
             label="Net P/L"
             value={
               <span style={{ color: plColor }}>
-                {summary.netPL >= 0 ? '+' : ''}
-                {formatCurrency(summary.netPL)}
+                {summary.netPL < 0 ? '-' : ''}{formatCurrency(Math.abs(summary.netPL))}
               </span>
             }
             className="border-r border-b"
@@ -150,8 +149,7 @@ export function Overview() {
             label="Net P/L"
             value={
               <span style={{ color: plColor }}>
-                {summary.netPL >= 0 ? '+' : ''}
-                {formatCurrency(summary.netPL)}
+                {summary.netPL < 0 ? '-' : ''}{formatCurrency(Math.abs(summary.netPL))}
               </span>
             }
             className="flex-1 border-r"

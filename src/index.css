@@ -1,0 +1,44 @@
+@import "tailwindcss";
+
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&display=swap');
+
+:root {
+  --bg: oklch(0.09 0 0);
+  --bg-surface: oklch(0.13 0 0);
+  --bg-hover: oklch(0.16 0 0);
+  --border: oklch(0.22 0 0);
+  --border-subtle: oklch(0.17 0 0);
+  --text-primary: oklch(0.95 0 0);
+  --text-secondary: oklch(0.6 0 0);
+  --text-tertiary: oklch(0.42 0 0);
+  --accent-won: oklch(0.72 0.17 150);
+  --accent-lost: oklch(0.62 0.2 25);
+  --accent-pending: oklch(0.78 0.15 85);
+  --accent-gebran: oklch(0.68 0.15 250);
+  --accent-jad: oklch(0.72 0.15 165);
+  --accent-dany: oklch(0.75 0.15 75);
+  --accent-elias: oklch(0.68 0.15 300);
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text-primary);
+  font-family: 'Geist', sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.font-mono {
+  font-family: 'Geist Mono', monospace !important;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: oklch(0.32 0 0); }

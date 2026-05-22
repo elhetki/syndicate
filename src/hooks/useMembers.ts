@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { supabase, GROUP_ID } from '../lib/supabase'
 import type { Member } from '../types'
 
@@ -7,21 +7,30 @@ export function useMembers() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    async function fetch() {
-      setLoading(true)
+  const fetch = useCallback(async () => {
+    setLoading(true)
+    setError(null)
+    try {
       const { data, error: err } = await supabase
         .from('syndicate_members')
         .select('*')
         .eq('group_id', GROUP_ID)
         .order('name')
 
-      if (err) setError(err.message)
-      else setMembers((data ?? []) as Member[])
+      if (err) throw err
+      setMembers((data ?? []) as Member[])
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to load members.')
+    } finally {
       setLoading(false)
     }
-    fetch()
   }, [])
 
-  return { members, loading, error }
+  useEffect(() => {
+    queueMicrotask(() => {
+      void fetch()
+    })
+  }, [fetch])
+
+  return { members, loading, error, refetch: fetch }
 }

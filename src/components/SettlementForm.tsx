@@ -31,8 +31,13 @@ export function SettlementForm({ members, settlement, onClose, onSaved }: Props)
   const [error, setError] = useState<string | null>(null)
 
   async function handleSave() {
+    const parsedAmount = Number(amount)
     if (!date || !memberId || !amount) {
       setError('Date, member, and amount are required.')
+      return
+    }
+    if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
+      setError('Amount must be greater than zero.')
       return
     }
     setSaving(true)
@@ -45,8 +50,8 @@ export function SettlementForm({ members, settlement, onClose, onSaved }: Props)
             date,
             member_id: memberId,
             direction,
-            amount: parseFloat(amount),
-            notes: notes || null,
+            amount: parsedAmount,
+            notes: notes.trim() || null,
           })
           .eq('id', settlement.id)
         if (err) throw err
@@ -56,8 +61,8 @@ export function SettlementForm({ members, settlement, onClose, onSaved }: Props)
           date,
           member_id: memberId,
           direction,
-          amount: parseFloat(amount),
-          notes: notes || null,
+          amount: parsedAmount,
+          notes: notes.trim() || null,
         })
         if (err) throw err
       }

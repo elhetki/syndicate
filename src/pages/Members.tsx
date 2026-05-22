@@ -156,11 +156,12 @@ const STAT_ROWS: { label: string; getValue: (ms: MemberStats) => React.ReactNode
 ]
 
 export function Members() {
-  const { bets } = useBets()
-  const { members } = useMembers()
-  const { settlements } = useSettlements()
+  const { bets, error: betsError } = useBets()
+  const { members, error: membersError } = useMembers()
+  const { settlements, error: settlementsError } = useSettlements()
   const memberStats = useMemberStats(members, bets, settlements)
   const isMobile = useIsMobile()
+  const loadError = betsError ?? membersError ?? settlementsError
 
   if (memberStats.length === 0) {
     return (
@@ -168,6 +169,11 @@ export function Members() {
         <h1 className="text-[20px] font-semibold mb-6" style={{ color: 'var(--text-primary)' }}>
           Members
         </h1>
+        {loadError && (
+          <div className="mb-4 rounded border border-[var(--accent-lost)]/30 bg-[var(--accent-lost)]/10 px-3 py-2 text-[12px] text-[var(--accent-lost)]">
+            {loadError}
+          </div>
+        )}
         <div className="text-[13px]" style={{ color: 'var(--text-tertiary)' }}>No members found.</div>
       </div>
     )
@@ -178,6 +184,12 @@ export function Members() {
       <h1 className="text-[20px] font-semibold mb-6" style={{ color: 'var(--text-primary)' }}>
         Members
       </h1>
+
+      {loadError && (
+        <div className="mb-4 rounded border border-[var(--accent-lost)]/30 bg-[var(--accent-lost)]/10 px-3 py-2 text-[12px] text-[var(--accent-lost)]">
+          {loadError}
+        </div>
+      )}
 
       {/* Mobile: accordion per member */}
       {isMobile ? (

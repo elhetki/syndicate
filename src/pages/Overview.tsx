@@ -38,10 +38,11 @@ function SkeletonRow() {
 }
 
 export function Overview() {
-  const { bets, loading: bLoading } = useBets()
-  const { members } = useMembers()
-  const { settlements } = useSettlements()
+  const { bets, loading: bLoading, error: betsError } = useBets()
+  const { members, error: membersError } = useMembers()
+  const { settlements, error: settlementsError } = useSettlements()
   const memberStats = useMemberStats(members, bets, settlements)
+  const loadError = betsError ?? membersError ?? settlementsError
 
   const summary = useMemo(() => computeGroupSummary(bets), [bets])
   const recentBets = bets.slice(0, 10)
@@ -52,17 +53,16 @@ export function Overview() {
       .filter((b) => b.result !== 'Pending')
       .sort((a, b) => a.date.localeCompare(b.date))
 
-    let cum = 0
-    return sorted.map((bet) => {
+    return sorted.reduce<{ date: string; pl: number; running: number }[]>((points, bet) => {
       const stakes = bet.stakes ?? []
       const totalStake = stakes.reduce((s, bk) => s + bk.stake, 0)
       const payout =
         bet.result === 'Won'
           ? (bet.actual_payout_override ?? bet.odds * totalStake)
           : 0
-      cum += payout - totalStake
-      return { date: formatDate(bet.date), pl: parseFloat(cum.toFixed(2)) }
-    })
+      const running = (points.at(-1)?.running ?? 0) + payout - totalStake
+      return [...points, { date: formatDate(bet.date), pl: parseFloat(running.toFixed(2)), running }]
+    }, []).map(({ date, pl }) => ({ date, pl }))
   }, [bets])
 
   // Member cumulative P/L per bet
@@ -103,6 +103,12 @@ export function Overview() {
       >
         Overview
       </h1>
+
+      {loadError && (
+        <div className="mb-4 rounded border border-[var(--accent-lost)]/30 bg-[var(--accent-lost)]/10 px-3 py-2 text-[12px] text-[var(--accent-lost)]">
+          {loadError}
+        </div>
+      )}
 
       {/* Stats row — 2×2 grid on mobile, horizontal row on desktop */}
       <div
@@ -235,7 +241,7 @@ export function Overview() {
                           {bet.event}
                         </div>
                         <div className="flex items-center gap-2 text-[12px] font-mono" style={{ color: 'var(--text-secondary)' }}>
-                          <span>×{formatOdds(bet.odds)}</span>
+                          <span>{formatOdds(bet.odds)}</span>
                           <span>·</span>
                           <PLValue value={pl} />
                         </div>

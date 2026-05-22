@@ -49,14 +49,15 @@ function SkeletonCard() {
 }
 
 export function Bets() {
-  const { bets, loading, refetch } = useBets()
-  const { members } = useMembers()
+  const { bets, loading, error: betsError, refetch } = useBets()
+  const { members, error: membersError } = useMembers()
   const [filter, setFilter] = useState<Filter>('All')
   const [sortKey, setSortKey] = useState<SortKey>('date')
-  const [expandedId] = useState<string | null>(null)
+  const [expandedId, setExpandedId] = useState<string | null>(null)
   const [editingBet, setEditingBet] = useState<Bet | null>(null)
   const [showAddForm, setShowAddForm] = useState(false)
   const isMobile = useIsMobile()
+  const loadError = betsError ?? membersError
 
   const filtered = bets.filter((b) => filter === 'All' || b.result === filter)
 
@@ -106,6 +107,12 @@ export function Bets() {
           Add Bet
         </button>
       </div>
+
+      {loadError && (
+        <div className="mb-4 rounded border border-[var(--accent-lost)]/30 bg-[var(--accent-lost)]/10 px-3 py-2 text-[12px] text-[var(--accent-lost)]">
+          {loadError}
+        </div>
+      )}
 
       {/* Filter + sort bar */}
       <div className="flex items-center justify-between mb-4">
@@ -187,7 +194,7 @@ export function Bets() {
                   </div>
                   {/* Row 3: odds / stake / P/L */}
                   <div className="flex items-center gap-3 text-[12px] font-mono mb-1.5" style={{ color: 'var(--text-secondary)' }}>
-                    <span>×{formatOdds(bet.odds)}</span>
+                    <span>{formatOdds(bet.odds)}</span>
                     <span>·</span>
                     <span>{formatCurrency(totalStake)}</span>
                     <span>·</span>
@@ -275,9 +282,21 @@ export function Bets() {
                       onMouseLeave={(e) => {
                         ;(e.currentTarget as HTMLTableRowElement).style.background = ''
                       }}
-                      onClick={() => setEditingBet(bet)}
+                      onClick={() => setExpandedId((current) => (current === bet.id ? null : bet.id))}
                     >
-                      <td className="pl-3 pr-1 py-3 text-[var(--text-tertiary)]" />
+                      <td className="pl-3 pr-1 py-3 text-[var(--text-tertiary)]">
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation()
+                            setEditingBet(bet)
+                          }}
+                          className="rounded border px-2 py-1 text-[11px] text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                          style={{ borderColor: 'var(--border)' }}
+                        >
+                          Edit
+                        </button>
+                      </td>
                       <td className="px-4 py-3 font-mono text-[12px]" style={{ color: 'var(--text-tertiary)' }}>
                         {formatDate(bet.date)}
                       </td>

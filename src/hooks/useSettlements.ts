@@ -9,26 +9,31 @@ export function useSettlements() {
 
   const fetch = useCallback(async () => {
     setLoading(true)
-    const { data, error: err } = await supabase
-      .from('syndicate_settlements')
-      .select(`*, syndicate_members(*)`)
-      .eq('group_id', GROUP_ID)
-      .order('date', { ascending: false })
+    setError(null)
+    try {
+      const { data, error: err } = await supabase
+        .from('syndicate_settlements')
+        .select(`*, syndicate_members(*)`)
+        .eq('group_id', GROUP_ID)
+        .order('date', { ascending: false })
 
-    if (err) {
-      setError(err.message)
-    } else {
+      if (err) throw err
       const mapped = (data ?? []).map((s: Record<string, unknown>) => ({
         ...s,
         member: s.syndicate_members,
       })) as Settlement[]
       setSettlements(mapped)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to load settlements.')
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }, [])
 
   useEffect(() => {
-    fetch()
+    queueMicrotask(() => {
+      void fetch()
+    })
   }, [fetch])
 
   return { settlements, loading, error, refetch: fetch }

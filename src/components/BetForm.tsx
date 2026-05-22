@@ -32,69 +32,117 @@ export function BetForm({ members, bet, onClose, onSaved }: Props) {
   const [deleting, setDeleting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  function validateForm():
+    | { ok: false; error: string }
+    | {
+        ok: true
+        parsedOdds: number
+        parsedPayoutOverride: number | null
+        stakeRows: { member_id: string; stake: number }[]
+        eventName: string
+      } {
+    const parsedOdds = Number(odds)
+    const parsedPayoutOverride = payoutOverride ? Number(payoutOverride) : null
+    const stakeRows = members
+      .map((m) => ({ member_id: m.id, stake: Number(stakes[m.id] ?? 0) }))
+      .filter((s) => s.stake > 0)
+
+    if (!date || !event.trim() || !odds) {
+      return { ok: false, error: 'Date, event, and odds are required.' }
+    }
+    if (!Number.isFinite(parsedOdds) || parsedOdds < 1) {
+      return { ok: false, error: 'Odds must be a number of 1.00 or higher.' }
+    }
+    if (
+      parsedPayoutOverride !== null &&
+      (!Number.isFinite(parsedPayoutOverride) || parsedPayoutOverride < 0)
+    ) {
+      return { ok: false, error: 'Payout override must be zero or higher.' }
+    }
+    for (const member of members) {
+      const raw = stakes[member.id]
+      if (raw && (!Number.isFinite(Number(raw)) || Number(raw) < 0)) {
+        return { ok: false, error: `Stake for ${member.name} must be zero or higher.` }
+      }
+    }
+    if (stakeRows.length === 0) {
+      return { ok: false, error: 'Add at least one stake before saving a bet.' }
+    }
+
+    return {
+      ok: true,
+      parsedOdds,
+      parsedPayoutOverride,
+      stakeRows,
+      eventName: event.trim(),
+    }
+  }
+
   async function handleSave() {
-    if (!date || !event || !odds) {
-      setError('Date, event, and odds are required.')
+    const validated = validateForm()
+    if (!validated.ok) {
+      setError(validated.error)
       return
     }
     setSaving(true)
     setError(null)
     try {
-      const stakeRows = members
-        .filter((m) => stakes[m.id] && parseFloat(stakes[m.id]) > 0)
-        .map((m) => ({
-          member_id: m.id,
-          stake: parseFloat(stakes[m.id]),
-        }))
+      const { parsedOdds, parsedPayoutOverride, stakeRows, eventName } = validated
 
       if (isEdit && bet) {
-        // UPDATE
         const { error: betErr } = await supabase
           .from('syndicate_bets')
           .update({
             date,
-            event,
-            odds: parseFloat(odds),
+            event: eventName,
+            odds: parsedOdds,
             result,
-            actual_payout_override: payoutOverride ? parseFloat(payoutOverride) : null,
+            actual_payout_override: parsedPayoutOverride,
           })
           .eq('id', bet.id)
         if (betErr) throw betErr
 
-        // Replace stakes
         const { error: delStakeErr } = await supabase
           .from('syndicate_bet_stakes')
           .delete()
           .eq('bet_id', bet.id)
         if (delStakeErr) throw delStakeErr
 
-        if (stakeRows.length > 0) {
-          const { error: stakeErr } = await supabase
-            .from('syndicate_bet_stakes')
-            .insert(stakeRows.map((s) => ({ ...s, bet_id: bet.id })))
-          if (stakeErr) throw stakeErr
+        const { error: stakeErr } = await supabase
+          .from('syndicate_bet_stakes')
+          .insert(stakeRows.map((s) => ({ ...s, bet_id: bet.id })))
+        if (stakeErr) {
+          const previousStakes = (bet.stakes ?? []).map((s) => ({
+            bet_id: bet.id,
+            member_id: s.member_id,
+            stake: s.stake,
+          }))
+          if (previousStakes.length > 0) {
+            await supabase.from('syndicate_bet_stakes').insert(previousStakes)
+          }
+          throw stakeErr
         }
       } else {
-        // INSERT
         const { data: betData, error: betErr } = await supabase
           .from('syndicate_bets')
           .insert({
             group_id: GROUP_ID,
             date,
-            event,
-            odds: parseFloat(odds),
+            event: eventName,
+            odds: parsedOdds,
             result,
-            actual_payout_override: payoutOverride ? parseFloat(payoutOverride) : null,
+            actual_payout_override: parsedPayoutOverride,
           })
           .select()
           .single()
         if (betErr) throw betErr
 
-        if (stakeRows.length > 0) {
-          const { error: stakeErr } = await supabase
-            .from('syndicate_bet_stakes')
-            .insert(stakeRows.map((s) => ({ ...s, bet_id: betData.id })))
-          if (stakeErr) throw stakeErr
+        const { error: stakeErr } = await supabase
+          .from('syndicate_bet_stakes')
+          .insert(stakeRows.map((s) => ({ ...s, bet_id: betData.id })))
+        if (stakeErr) {
+          await supabase.from('syndicate_bets').delete().eq('id', betData.id)
+          throw stakeErr
         }
       }
 

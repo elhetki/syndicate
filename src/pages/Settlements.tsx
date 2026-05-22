@@ -43,11 +43,12 @@ function SkeletonCard() {
 }
 
 export function Settlements() {
-  const { settlements, loading, refetch } = useSettlements()
-  const { members } = useMembers()
+  const { settlements, loading, error: settlementsError, refetch } = useSettlements()
+  const { members, error: membersError } = useMembers()
   const [showAddForm, setShowAddForm] = useState(false)
   const [editingSettlement, setEditingSettlement] = useState<Settlement | null>(null)
   const isMobile = useIsMobile()
+  const loadError = settlementsError ?? membersError
 
   return (
     <div>
@@ -73,6 +74,12 @@ export function Settlements() {
           Add Settlement
         </button>
       </div>
+
+      {loadError && (
+        <div className="mb-4 rounded border border-[var(--accent-lost)]/30 bg-[var(--accent-lost)]/10 px-3 py-2 text-[12px] text-[var(--accent-lost)]">
+          {loadError}
+        </div>
+      )}
 
       {/* ── MOBILE: Card list ── */}
       {isMobile ? (

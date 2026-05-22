@@ -1,12 +1,9 @@
-import { useState } from 'react'
 import { NavLink } from 'react-router-dom'
 import {
   LayoutDashboard,
   Receipt,
   Users,
   ArrowLeftRight,
-  Menu,
-  X,
 } from 'lucide-react'
 
 const navItems = [
@@ -21,8 +18,6 @@ interface Props {
 }
 
 export function Layout({ children }: Props) {
-  const [mobileOpen, setMobileOpen] = useState(false)
-
   const sidebar = (
     <div
       className="flex flex-col h-full"
@@ -47,7 +42,6 @@ export function Layout({ children }: Props) {
           <NavLink
             key={to}
             to={to}
-            onClick={() => setMobileOpen(false)}
             className={({ isActive }) =>
               `flex items-center gap-3 px-3 py-2 rounded text-[13px] transition-colors ${
                 isActive
@@ -67,9 +61,7 @@ export function Layout({ children }: Props) {
         className="px-5 py-4 border-t flex items-center gap-2"
         style={{ borderColor: 'var(--border)' }}
       >
-        <span
-          className="w-2 h-2 rounded-full bg-[var(--accent-won)] inline-block"
-        />
+        <span className="w-2 h-2 rounded-full bg-[var(--accent-won)] inline-block" />
         <span className="text-[12px]" style={{ color: 'var(--text-tertiary)' }}>
           Stake Syndicate
         </span>
@@ -84,40 +76,61 @@ export function Layout({ children }: Props) {
         {sidebar}
       </div>
 
-      {/* Mobile top bar */}
+      {/* Mobile top app bar */}
       <div
-        className="md:hidden fixed top-0 left-0 right-0 z-40 flex items-center justify-between px-4 py-3 border-b"
+        className="md:hidden fixed top-0 left-0 right-0 z-40 flex items-center px-4 h-[52px] border-b"
         style={{ background: 'var(--bg-surface)', borderColor: 'var(--border)' }}
       >
-        <div className="text-[13px] font-semibold tracking-widest uppercase" style={{ color: 'var(--text-primary)' }}>
+        <div
+          className="text-[13px] font-semibold tracking-widest uppercase"
+          style={{ color: 'var(--text-primary)' }}
+        >
           SYNDICATE
         </div>
-        <button
-          onClick={() => setMobileOpen((v) => !v)}
-          className="p-1"
-          style={{ color: 'var(--text-secondary)' }}
-        >
-          {mobileOpen ? <X size={18} /> : <Menu size={18} />}
-        </button>
       </div>
-
-      {/* Mobile sidebar overlay */}
-      {mobileOpen && (
-        <div
-          className="md:hidden fixed inset-0 z-30 flex"
-          onClick={() => setMobileOpen(false)}
-        >
-          <div className="w-60 h-full" onClick={(e) => e.stopPropagation()}>
-            {sidebar}
-          </div>
-          <div className="flex-1 bg-black/50" />
-        </div>
-      )}
 
       {/* Main content */}
       <main className="flex-1 md:ml-60 min-h-screen overflow-y-auto">
-        <div className="p-8 pt-16 md:pt-8">{children}</div>
+        {/* Mobile: pt for top bar + pb for bottom tabs */}
+        {/* Desktop: normal pt-8 */}
+        <div className="p-4 pt-[64px] pb-[76px] md:p-8 md:pt-8 md:pb-8">
+          {children}
+        </div>
       </main>
+
+      {/* Mobile bottom tab bar */}
+      <nav
+        className="md:hidden fixed bottom-0 left-0 right-0 z-40 flex items-center border-t"
+        style={{
+          background: 'var(--bg-surface)',
+          borderColor: 'var(--border)',
+          height: '56px',
+        }}
+      >
+        {navItems.map(({ to, label, Icon }) => (
+          <NavLink
+            key={to}
+            to={to}
+            className="flex-1 flex flex-col items-center justify-center gap-[3px] relative"
+            style={({ isActive }) => ({
+              color: isActive ? 'var(--text-primary)' : 'var(--text-tertiary)',
+            })}
+          >
+            {({ isActive }) => (
+              <>
+                {isActive && (
+                  <span
+                    className="absolute top-0 left-1/2 -translate-x-1/2 w-4 h-[2px] rounded-full"
+                    style={{ background: 'var(--text-primary)' }}
+                  />
+                )}
+                <Icon size={20} strokeWidth={isActive ? 2 : 1.5} />
+                <span className="text-[10px] font-medium">{label}</span>
+              </>
+            )}
+          </NavLink>
+        ))}
+      </nav>
     </div>
   )
 }

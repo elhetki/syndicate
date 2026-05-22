@@ -1,3 +1,5 @@
+import { useState, useEffect } from 'react'
+import { ChevronDown, ChevronRight } from 'lucide-react'
 import { useBets } from '../hooks/useBets'
 import { useMembers } from '../hooks/useMembers'
 import { useSettlements } from '../hooks/useSettlements'
@@ -6,6 +8,16 @@ import { formatCurrency } from '../lib/calculations'
 import { MemberDot } from '../components/MemberDot'
 import { PLValue } from '../components/PLValue'
 import type { MemberStats } from '../types'
+
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
+  useEffect(() => {
+    const fn = () => setIsMobile(window.innerWidth < 768)
+    window.addEventListener('resize', fn)
+    return () => window.removeEventListener('resize', fn)
+  }, [])
+  return isMobile
+}
 
 function MemberCard({ ms }: { ms: MemberStats }) {
   const winRate =
@@ -18,12 +30,9 @@ function MemberCard({ ms }: { ms: MemberStats }) {
       className="flex-1 border rounded p-5"
       style={{ borderColor: 'var(--border)', background: 'var(--bg-surface)' }}
     >
-      {/* Header */}
       <div className="flex items-center gap-2 mb-4">
         <MemberDot color={ms.member.color} name={ms.member.name} size="lg" />
       </div>
-
-      {/* Stats grid */}
       <div className="grid grid-cols-2 gap-3 mb-4">
         {[
           { label: 'Total Staked', val: formatCurrency(ms.totalStaked) },
@@ -41,8 +50,6 @@ function MemberCard({ ms }: { ms: MemberStats }) {
           </div>
         ))}
       </div>
-
-      {/* Win rate */}
       <div className="mb-2">
         <div className="flex justify-between text-[11px] mb-1" style={{ color: 'var(--text-tertiary)' }}>
           <span>Win rate</span>
@@ -55,10 +62,80 @@ function MemberCard({ ms }: { ms: MemberStats }) {
           />
         </div>
       </div>
-
       {ms.pendingExposure > 0 && (
         <div className="mt-2 text-[11px]" style={{ color: 'var(--accent-pending)' }}>
           {formatCurrency(ms.pendingExposure)} pending exposure
+        </div>
+      )}
+    </div>
+  )
+}
+
+function MemberAccordion({ ms }: { ms: MemberStats }) {
+  const [open, setOpen] = useState(false)
+  const winRate =
+    ms.wonBets + ms.lostBets > 0
+      ? (ms.wonBets / (ms.wonBets + ms.lostBets)) * 100
+      : 0
+
+  return (
+    <div
+      className="border rounded overflow-hidden"
+      style={{ borderColor: 'var(--border)', background: 'var(--bg-surface)' }}
+    >
+      <button
+        className="w-full flex items-center justify-between px-4 py-3"
+        style={{ minHeight: 44 }}
+        onClick={() => setOpen((v) => !v)}
+      >
+        <MemberDot color={ms.member.color} name={ms.member.name} size="lg" />
+        <div className="flex items-center gap-4">
+          <PLValue value={ms.balanceVsAccount} />
+          {open ? <ChevronDown size={14} style={{ color: 'var(--text-tertiary)' }} /> : <ChevronRight size={14} style={{ color: 'var(--text-tertiary)' }} />}
+        </div>
+      </button>
+      {open && (
+        <div
+          className="px-4 pb-4 pt-1 border-t"
+          style={{ borderColor: 'var(--border-subtle)' }}
+        >
+          <div className="grid grid-cols-2 gap-3 mb-3">
+            {[
+              { label: 'Total Staked', val: formatCurrency(ms.totalStaked) },
+              { label: 'Net P/L', val: <PLValue value={ms.realizedNetPL} /> },
+              { label: 'Returned', val: formatCurrency(ms.grossReturned) },
+              { label: 'Won / Lost', val: <span className="font-mono text-[13px]"><span style={{ color: 'var(--accent-won)' }}>{ms.wonBets}W</span> / <span style={{ color: 'var(--accent-lost)' }}>{ms.lostBets}L</span></span> },
+              { label: 'Paid Out', val: formatCurrency(ms.paidToPerson) },
+              { label: 'Received', val: formatCurrency(ms.receivedFromPerson) },
+            ].map(({ label, val }) => (
+              <div key={label}>
+                <div className="text-[10px] uppercase tracking-widest mb-1" style={{ color: 'var(--text-tertiary)' }}>
+                  {label}
+                </div>
+                <div className="text-[13px] font-mono" style={{ color: 'var(--text-primary)' }}>
+                  {val}
+                </div>
+              </div>
+            ))}
+          </div>
+          {/* Win rate bar */}
+          <div>
+            <div className="flex justify-between text-[11px] mb-1" style={{ color: 'var(--text-tertiary)' }}>
+              <span>Win rate</span>
+              <span>{winRate.toFixed(0)}%</span>
+            </div>
+            <div className="h-0.5 rounded-full" style={{ background: 'var(--border)' }}>
+              <div
+                className="h-full rounded-full"
+                style={{ width: `${winRate}%`, background: ms.member.color }}
+              />
+            </div>
+          </div>
+          {ms.pendingExposure > 0 && (
+            <div className="mt-2 text-[11px]" style={{ color: 'var(--accent-pending)' }}>
+              {formatCurrency(ms.pendingExposure)} pending exposure
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -83,6 +160,18 @@ export function Members() {
   const { members } = useMembers()
   const { settlements } = useSettlements()
   const memberStats = useMemberStats(members, bets, settlements)
+  const isMobile = useIsMobile()
+
+  if (memberStats.length === 0) {
+    return (
+      <div>
+        <h1 className="text-[20px] font-semibold mb-6" style={{ color: 'var(--text-primary)' }}>
+          Members
+        </h1>
+        <div className="text-[13px]" style={{ color: 'var(--text-tertiary)' }}>No members found.</div>
+      </div>
+    )
+  }
 
   return (
     <div>
@@ -90,18 +179,24 @@ export function Members() {
         Members
       </h1>
 
-      {/* Member cards */}
-      <div className="flex gap-4 mb-8 flex-wrap">
-        {memberStats.map((ms) => (
-          <MemberCard key={ms.member.id} ms={ms} />
-        ))}
-        {memberStats.length === 0 && (
-          <div className="text-[13px]" style={{ color: 'var(--text-tertiary)' }}>No members found.</div>
-        )}
-      </div>
+      {/* Mobile: accordion per member */}
+      {isMobile ? (
+        <div className="space-y-3 mb-8">
+          {memberStats.map((ms) => (
+            <MemberAccordion key={ms.member.id} ms={ms} />
+          ))}
+        </div>
+      ) : (
+        /* Desktop: side-by-side cards */
+        <div className="flex gap-4 mb-8 flex-wrap">
+          {memberStats.map((ms) => (
+            <MemberCard key={ms.member.id} ms={ms} />
+          ))}
+        </div>
+      )}
 
-      {/* Comparison table */}
-      {memberStats.length > 0 && (
+      {/* Comparison table — desktop only */}
+      {!isMobile && memberStats.length > 0 && (
         <div
           className="rounded border overflow-hidden"
           style={{ borderColor: 'var(--border)', background: 'var(--bg-surface)' }}
